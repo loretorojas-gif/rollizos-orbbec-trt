@@ -105,5 +105,16 @@ rollizos-orbbec-trt/
     └── 2_compilar_trt.py      # .onnx → .engine (solo si Jetson diferente)
 ```
 
-Los archivos del modelo no estan en el repo por su tamaño.
-Solicitalos al equipo o compila siguiendo el Caso B.
+## Archivos del modelo
+
+Los archivos no estan en el repo por su tamaño. Estan disponibles en Google Drive:
+
+**[Carpeta Google Drive — rollizos-orbbec-trt_modelos](https://drive.google.com/drive/folders/1j5OwLzNoitUCsEBrqYvY-v7hR3s_fqEz?usp=drive_link)**
+
+| Archivo | Tamaño | Para que sirve |
+|---|---|---|
+| `rfdetr_rollizos_fp16.engine` | 64 MB | Motor TRT listo para usar (Caso A) |
+| `inference_model.onnx` | 118 MB | Para compilar en otra Jetson (Caso B) |
+| `checkpoint_best_total.pth` | 129 MB | Pesos originales del modelo (Caso B) |
+
+> Reemplaza el link con el de tu carpeta de Drive una vez que la compartas.
