@@ -1,0 +1,25 @@
+# Modelo y motor (archivos grandes — subir por separado o con Git LFS)
+*.pth
+*.onnx
+*.engine
+
+# Resultados de inferencia
+resultados_trt_rt/
+resultados_offline/
+gdrive_input/
+gdrive_resultados_medicion/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editor
+.vscode/
+.idea/
+*.swp
