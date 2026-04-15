@@ -34,7 +34,7 @@ SKIP_FRAMES = 2              # ejecutar inferencia cada N frames capturados
 # ── Guardado automatico ────────────────────────────────────────────────────────
 GUARDAR_AUTO       = True
 CARPETA_RESULTADOS = "resultados_trt_rt"
-INTERVALO_GUARDADO = 5       # segundos minimos entre guardados consecutivos
+INTERVALO_GUARDADO = 6       # segundos minimos entre guardados consecutivos
 
 # ── Medicion ───────────────────────────────────────────────────────────────────
 PROF_MAX_MM = 5000           # ignorar lecturas de profundidad > 5 m (ruido)
