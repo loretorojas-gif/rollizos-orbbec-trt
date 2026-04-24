@@ -9,7 +9,7 @@ Uso:
   python3 scripts/generar_video.py --carpeta fotos_rollizo --fps 5 --salida demo.mp4
 """
 
-import os, sys, glob, re, argparse
+import os, sys, glob, re, argparse, shutil, subprocess, tempfile
 import cv2
 import numpy as np
 import torch
@@ -162,26 +162,23 @@ def main():
     if not pares:
         print(f"[ERROR] No se encontraron pares rgb/depth en: {args.carpeta}")
         sys.exit(1)
-    print(f"[*] {len(pares)} frames a procesar → {args.salida} @ {args.fps} FPS")
+    print(f"[*] {len(pares)} frames a procesar -> {args.salida} @ {args.fps} FPS")
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(args.salida, fourcc, args.fps,
-                             (cfg.COLOR_WIDTH, cfg.COLOR_HEIGHT))
-    if not writer.isOpened():
-        print("[ERROR] No se pudo crear el archivo de video.")
-        sys.exit(1)
+    tmp_dir = tempfile.mkdtemp(prefix="rollizos_frames_")
+    print(f"[*] Frames temporales en: {tmp_dir}")
 
     total_det = 0
+    frames_escritos = 0
 
     for idx, (rgb_path, depth_path) in enumerate(pares):
-        bgr      = cv2.imread(rgb_path)
-        depth_raw = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)  # uint16, valores en mm
+        bgr       = cv2.imread(rgb_path)
+        depth_raw = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
 
         if bgr is None or depth_raw is None:
             print(f"  [WARN] No se pudo leer: {os.path.basename(rgb_path)}, saltando.")
             continue
 
-        depth_mm = depth_raw.astype(np.float32)  # Gemini 2: raw uint16 ya en mm
+        depth_mm = depth_raw.astype(np.float32)
 
         salidas  = inferir(bgr, context, tensors, stream)
         cajas    = salidas["dets"][0]
@@ -204,18 +201,38 @@ def main():
 
         total_det += n_det
 
-        hud = f"Frame {idx + 1}/{len(pares)}  |  Rollizos detectados: {n_det}"
+        hud = f"Frame {idx + 1}/{len(pares)}  |  Rollizos: {n_det}"
         cv2.putText(bgr, hud, (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 220, 255), 2)
 
-        writer.write(bgr)
-        print(f"  [{idx + 1:>3}/{len(pares)}] {os.path.basename(rgb_path)}  →  {n_det} det.")
+        frame_path = os.path.join(tmp_dir, f"frame_{frames_escritos:05d}.jpg")
+        cv2.imwrite(frame_path, bgr, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        frames_escritos += 1
+        print(f"  [{idx + 1:>3}/{len(pares)}] {os.path.basename(rgb_path)}  ->  {n_det} det.")
 
-    writer.release()
     print()
+    print(f"[*] Combinando {frames_escritos} frames con ffmpeg...")
+    cmd = [
+        "ffmpeg", "-y",
+        "-r", str(args.fps),
+        "-i", os.path.join(tmp_dir, "frame_%05d.jpg"),
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        "-movflags", "faststart",
+        "-pix_fmt", "yuv420p",
+        args.salida,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    shutil.rmtree(tmp_dir)
+
+    if result.returncode != 0:
+        print(f"[ERROR] ffmpeg fallo:\n{result.stderr[-500:]}")
+        sys.exit(1)
+
     print(f"[OK] Video guardado: {args.salida}")
-    print(f"     Frames: {len(pares)}  |  Detecciones totales: {total_det}")
-    print(f"     Duración aprox: {len(pares) / args.fps:.1f}s @ {args.fps} FPS")
+    print(f"     Frames: {frames_escritos}  |  Detecciones totales: {total_det}")
+    print(f"     Duracion aprox: {frames_escritos / args.fps:.1f}s @ {args.fps} FPS")
 
 
 if __name__ == "__main__":
